@@ -40,8 +40,10 @@ class App(tk.Tk):
 
     def _init_statusbar(self):
         # Status Bar
-        self.status = tk.Label(self, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor="w")
-        self.status.grid(row=2, column=0, columnspan=2, sticky="we", padx=2, pady=2)
+        self.status_left = tk.Label(self, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor="w")
+        self.status_right = tk.Label(self, text="test", bd=1, relief=tk.SUNKEN, anchor="e")
+        self.status_left.grid(row=2, column=0, columnspan=2, sticky="we", padx=2, pady=2)
+        self.status_right.grid(row=2, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
 
     def _init_toolbar(self):
         # Tool bar
@@ -63,6 +65,7 @@ class App(tk.Tk):
             if validate_image_directory(path):
                 self.image_dir_path = path
                 self._init_images()
+                self.status_left.config(text="Image directory set.")
             else:
                 raise FileNotFoundError("There were no images found in the selected directory.")
     
@@ -77,6 +80,7 @@ class App(tk.Tk):
         if path:
             if validate_directory(path):
                 self.mask_dir_path = path
+                self.status_left.config(text="Mask directory set.")
             else:
                 raise FileNotFoundError("Not a valid directory?")
 
@@ -102,11 +106,11 @@ class App(tk.Tk):
 
         # Check if the mouse is inside the canvas
         if 0 <= x <= self.canvases.canvas1.winfo_width() and 0 <= y <= self.canvases.canvas1.winfo_height():
-            self.status.config(text=f"Image Coordinates: ({x}, {y})")
+            self.status_right.config(text=f"Image Coordinates: ({x}, {y})")
         elif 0 <= x <= self.canvases.canvas2.winfo_width() and 0 <= y <= self.canvases.canvas2.winfo_height():
-            self.status.config(text=f"Image Coordinates: ({x}, {y})") 
+            self.status_right.config(text=f"Image Coordinates: ({x}, {y})") 
         else:
-            self.status.config(text="Mouse is outside the canvas")
+            self.status_right.config(text="Mouse is outside the canvas")
 
     def on_left_click(self, event):
         """Handle left-click event on the canvas."""
@@ -137,7 +141,7 @@ class App(tk.Tk):
 
     def open_popup(self, color):
         """Open a popup window with specific text, number-only field, and an OK button."""
-        
+        self.status_left.config(text="Adding color...")
         # Create the popup window
         popup = tk.Toplevel(self)
         popup.title("Specify color threshold")
@@ -168,17 +172,18 @@ class App(tk.Tk):
             index = len(self.gt_colors)
             threshold = int(value)
             self.gt_colors.append((index, color, threshold)) # (idx, color, threshold)
-            print(self.gt_colors[-1])
             self.canvases.add_mask(color, threshold)
             self.canvases.display_mask()
+            self.status_left.config(text=f"Added color {str(color)} with threshold: {threshold}")
         else:
             tk.messagebox.showwarning("Invalid input", "Please enter a valid number.")
 
     def save_mask(self, event):
-        # update status to saving...
+        self.status_left.config(text="Saving mask...")
         if self.canvases.segmentation_mask is not None:
             filename = f"{grab_filename(self.images[0]).split("_")[0]}_mask.png"
             self.canvases.save_mask(path_to_file(self.mask_dir_path, filename))
+        self.status_left.config(text="Mask saved.")
 
 if __name__ == "__main__":
     app = App()
