@@ -15,3 +15,9 @@ def validate_image_directory(directory:str):
 def validate_directory(directory:str):
     # Check if the directory exists
     return os.path.isdir(directory) > 0
+
+def grab_filename(path:str):
+    return os.path.basename(path)
+
+def path_to_file(dir_path:str, file:str):
+    return os.path.join(dir_path, file)

@@ -11,6 +11,7 @@ class CanvasManager:
         self.working_image = None
         self.distance_masks = []
         self.segment_masks = []
+        self.segmentation_mask = None
     
     def _init_distance_calc(self):
         method = self.settings.get("method")
@@ -62,8 +63,8 @@ class CanvasManager:
             self.segment_masks[color_idx] = mask
 
     def display_mask(self):
-        segmentation_mask = combine_masks(self.working_image, self.segment_masks)
-        rgb_mask = segment_mask_2_rgb_image(self.working_image, segmentation_mask)
+        self.segmentation_mask = combine_masks(self.working_image, self.segment_masks)
+        rgb_mask = segment_mask_2_rgb_image(self.working_image, self.segmentation_mask)
 
         self.image_tk_2 = ImageTk.PhotoImage(Image.fromarray(rgb_mask))
         self.canvas2.create_image(0, 0, anchor="nw", image=self.image_tk_2)
@@ -71,3 +72,8 @@ class CanvasManager:
     def reset_masks(self):
         self.distance_masks = []
         self.segment_masks = []
+        self.segmentation_mask = None
+
+    def save_mask(self, path):
+        save_image(self.segmentation_mask, path)
+        # update status to: Mask saved.

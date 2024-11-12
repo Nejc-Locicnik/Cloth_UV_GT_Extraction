@@ -1,4 +1,5 @@
 import cv2
+from PIL import Image
 import numpy as np
 #import logging
 
@@ -12,6 +13,10 @@ def read_image(path:str) -> np.array:
     """
 
     return cv2.imread(path)
+
+def save_image(img:np.array, path:str) -> None:
+    image = Image.fromarray(img, mode='L')
+    image.save(path)
 
 def change_color_space(img:np.array, in_out_c_space:str = "BGR2RGB") -> np.array:
     """

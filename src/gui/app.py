@@ -4,6 +4,7 @@ from ..utils.file_utils import *
 from .canvas import CanvasManager
 import json
 
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -54,6 +55,7 @@ class App(tk.Tk):
         self.canvases.canvas1.bind("<Button-1>", self.on_left_click)
         self.bind('<Left>', self.previous_image)  # Left arrow key for previous image
         self.bind('<Right>', self.next_image)    # Right arrow key for next image
+        self.bind('<Control-s>', self.save_mask)
 
     def set_image_directory(self):
         path = select_directory()
@@ -171,6 +173,12 @@ class App(tk.Tk):
             self.canvases.display_mask()
         else:
             tk.messagebox.showwarning("Invalid input", "Please enter a valid number.")
+
+    def save_mask(self, event):
+        # update status to saving...
+        if self.canvases.segmentation_mask is not None:
+            filename = f"{grab_filename(self.images[0]).split("_")[0]}_mask.png"
+            self.canvases.save_mask(path_to_file(self.mask_dir_path, filename))
 
 if __name__ == "__main__":
     app = App()
