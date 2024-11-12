@@ -55,7 +55,7 @@ def denoise_mask(mask:np.array, kernel_sz:int=3, iter:int=1) -> np.array:
 
     return dilated_mask
 
-def match_delta_e_2000(img:np.array, color:np.array, threshold:int):
+def match_delta_e_2000(img:np.array, color:np.array):
     """
     Calculate the Delta E 2000 color difference between an image and a specified color in the HSV color space.
     Applies a threshold to mark significant changes in a mask.
@@ -112,11 +112,11 @@ def match_delta_e_2000(img:np.array, color:np.array, threshold:int):
     )
 
     # Step 10: Create a binary mask where Delta E is below the threshold
-    change_mask = (delta_E < threshold).astype(np.uint8) # Scale to 255 for an 8-bit mask
+    #change_mask = (delta_E < threshold).astype(np.uint8) # Scale to 255 for an 8-bit mask
     #change_mask = delta_E
-    return change_mask
+    return delta_E # return color distance
 
-def hsv_match(img1:np.array, color:np.array, threshold:int) -> np.array:
+def hsv_match(img1:np.array, color:np.array) -> np.array:
     """
     Look at similarity between areas of the image and the specified colors in the HSV color space using
     the Hue channel. Simple Euclidean distance (^2 squared). Thershold the result on desired value.
@@ -132,7 +132,47 @@ def hsv_match(img1:np.array, color:np.array, threshold:int) -> np.array:
 
     delta_e = np.sqrt(delta_H**2  + delta_S**2 + delta_V**2)
 
-    change_mask = (delta_e < threshold).astype(np.uint8)
+    #change_mask = (delta_e < threshold).astype(np.uint8)
     #change_mask = delta_e
     
-    return change_mask
+    return delta_e # return color distance
+
+def threshold_color_distance(distance, threshold):
+    """Threshold the color distances to create a mask."""
+    return (distance < threshold).astype(np.uint8)
+
+def combine_masks(img, masks):
+    """
+    Combines multiple thresholded masks into a single mask. Color is encoded by index of target color.    
+    """
+
+    segmentation_mask = np.zeros_like(img, dtype=np.uint8)[:, :, 0]
+
+    for i, mask in enumerate(masks):
+        segmentation_mask += mask*(i+1)
+
+    return segmentation_mask
+
+def segment_mask_2_rgb_image(img, segment_mask):
+    """
+    Transform the combined mask with encoded values into an RGB image by mapping encoded values to specific colors.
+    """
+
+    color_map = {
+        0: (0, 0, 0),
+        1: (255, 0, 0),
+        2: (0, 255, 0),
+        3: (0, 0, 255),
+        4: (255, 255, 0),
+        5: (0, 255, 255),
+        6: (255, 0, 255),
+        7: (255, 255, 255)
+    }
+
+    rgb_mask = np.zeros_like(img, dtype=np.uint8)
+
+    for val, color in color_map.items():
+        val_mask = segment_mask.squeeze() == val
+        rgb_mask[val_mask] = color
+
+    return rgb_mask
