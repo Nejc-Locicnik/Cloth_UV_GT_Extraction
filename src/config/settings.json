@@ -1,13 +1,7 @@
 {
-    "gui": {
-        "win_height": 542,
-        "win_width" : 1030,
-        "display_c_space": "LAB2RGB"
-    },
-    "extraction": {
-        "proc_c_space": "BGR2LAB",
-        "size"        : 512,
-        "method"      : "delta_e_2000" 
-    }
-    
+    "display_c_space": "RGB",
+    "proc_c_space": "LAB",
+    "size"        : 512,
+    "method"      : "delta_e_2000",
+    "channels"    : 3
 }
