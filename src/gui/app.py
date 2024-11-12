@@ -2,7 +2,6 @@ import tkinter as tk
 from tkinter import Menu
 from ..utils.file_utils import *
 from .canvas import CanvasManager
-from .control import ImageNavigator
 import json
 
 class App(tk.Tk):
