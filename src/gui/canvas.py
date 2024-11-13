@@ -27,10 +27,10 @@ class CanvasManager:
         # Add two canvases side by side
         self.sz = self.settings.get("size")
         self.canvas1 = tk.Canvas(self.parent, bg="white", width=self.sz, height=self.sz)
-        self.canvas1.grid(row=1, column=0, sticky="nsew")
+        self.canvas1.grid(row=0, column=0, sticky="nsew")
 
         self.canvas2 = tk.Canvas(self.parent, bg="white", width=self.sz, height=self.sz)
-        self.canvas2.grid(row=1, column=1, sticky="nsew")
+        self.canvas2.grid(row=0, column=1, sticky="nsew")
 
     def open_image(self, img_path):
         c_space = f"BGR2{self.settings.get("proc_c_space")}"
@@ -48,6 +48,7 @@ class CanvasManager:
         mask = threshold_color_distance(dist, threshold)
         self.distance_masks.append(dist)
         self.segment_masks.append(mask)
+        self.display_mask()
 
     def update_distance(self, color_idx, color, threshold):
         if color_idx < len(self.distance_masks): # index validity check
@@ -55,12 +56,14 @@ class CanvasManager:
             mask = threshold_color_distance(dist, threshold)
             self.distance_masks[color_idx] = dist
             self.segment_masks[color_idx] = mask
+            self.display_mask()
 
     def update_seg_mask(self, color_idx, threshold):
         if color_idx < len(self.distance_masks): # index validity check
             dist = self.distance_masks[color_idx]
             mask = threshold_color_distance(dist, threshold)
             self.segment_masks[color_idx] = mask
+            self.display_mask()
 
     def display_mask(self):
         self.segmentation_mask = combine_masks(self.working_image, self.segment_masks)
@@ -73,6 +76,10 @@ class CanvasManager:
         self.distance_masks = []
         self.segment_masks = []
         self.segmentation_mask = None
+
+    def get_rgb_color(self, color):
+        c_space = f"{self.settings.get("proc_c_space")}2{self.settings.get("display_c_space")}"
+        return change_color_space(color.reshape((1, 1, 3)), c_space).reshape((3))
 
     def save_mask(self, path):
         save_image(self.segmentation_mask, path)

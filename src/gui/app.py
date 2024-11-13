@@ -1,8 +1,10 @@
 import tkinter as tk
+from tkinter import ttk
 from tkinter import Menu
 from ..utils.file_utils import *
 from .canvas import CanvasManager
 import json
+import gc
 
 
 class App(tk.Tk):
@@ -36,22 +38,47 @@ class App(tk.Tk):
         menubar.add_cascade(label="File", menu=file_menu)
 
         edit_menu = Menu(menubar, tearoff=0)
-        edit_menu.add_command(label="Undo")
-        edit_menu.add_command(label="Redo")
+        edit_menu.add_command(label="Reset colors", command=self.reset_colors)
         menubar.add_cascade(label="Edit", menu=edit_menu)
 
     def _init_statusbar(self):
         # Status Bar
-        self.status_left = tk.Label(self, text="Status: Ready", bd=1, relief=tk.SUNKEN, anchor="w")
-        self.status_right = tk.Label(self, text="test", bd=1, relief=tk.SUNKEN, anchor="e")
-        self.status_left.grid(row=2, column=0, columnspan=2, sticky="we", padx=2, pady=2)
-        self.status_right.grid(row=2, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
+        self.status_left = tk.Label(self, text="Status: Ready", bd=1, relief=tk.FLAT, anchor="w")
+        self.status_right = tk.Label(self, text="Coordinates...", bd=1, relief=tk.FLAT, anchor="e")
+        self.status_left.grid(row=1, column=0, columnspan=2, sticky="we", padx=2, pady=2)
+        self.status_right.grid(row=1, column=1, columnspan=2, sticky="ew", padx=2, pady=2)
 
     def _init_toolbar(self):
         # Tool bar
-        self.toolbar = tk.Frame(self, width=50, height=self.settings.get("size"), bg="#eeeeee")
-        self.toolbar.grid(row=1, column=2, sticky="nsew")
-        # TODO buttons, chosen colors visualization etc
+        self.toolbar = tk.Frame(self, width=150, height=self.settings.get("size"), bg="#eeeeee")
+        self.toolbar.grid(row=0, column=2, sticky="nsew")
+
+        #self.toolbar.grid_propagate(False)  
+        #self.toolbar.rowconfigure([i for i in range(7)], weight=1)  # Evenly distribute row space
+        #self.toolbar.columnconfigure([0, 1, 2], weight=1)
+
+        # Button dimensions
+        #button_size = self.settings["size"] // 7
+        self.controls = []
+        for i in range(7):
+            row_frame = tk.Frame(self.toolbar)
+            row_frame.grid(row=i+1, column=3, padx=2, pady=2, sticky="e")
+
+            button = tk.Button(row_frame, bg="#eeeeee", width=6, relief=tk.RAISED)
+            button.grid(row=0, column=0, padx=2, pady=5)
+
+            slider = ttk.Scale(row_frame, from_=0, to=50, orient="horizontal",
+                               command=lambda value, i=i: self.update_entry(value, i))
+            slider.grid(row=0, column=1, padx=(0, 10))
+
+            # Entry field for each row, linked to the slider
+            entry = tk.Entry(row_frame, width=5)
+            entry.grid(row=0, column=2)
+            entry.insert(0, "0")  # Initialize with 0
+            entry.bind("<Return>", lambda event, i=i: self.update_slider(i))
+            entry.bind("<FocusOut>", lambda event, i=i: self.update_slider(i))
+
+            self.controls.append((button, slider, entry))
     
     def _init_events(self):
         self.canvases.canvas1.bind("<Motion>", self.update_mouse_coordinates)
@@ -118,7 +145,14 @@ class App(tk.Tk):
         """Handle left-click event on the canvas."""
         x, y = event.x, event.y
         if self.canvases.working_image is not None:
-            self.open_popup(self.canvases.working_image[y, x])
+            color = self.canvases.working_image[y, x]
+            index = len(self.gt_colors)
+            threshold = 10
+            self.gt_colors.append((index, color, threshold)) # (idx, color, threshold)
+            self.color_button(index, color, threshold)
+            self.canvases.add_mask(color, threshold)
+            self.canvases.display_mask()
+            self.status_left.config(text=f"Added color {str(color)} with threshold: {threshold}")
         #print(f"Left-click at coordinates: ({x}, {y})")
 
     def previous_image(self, event):
@@ -141,45 +175,6 @@ class App(tk.Tk):
             self.canvases.add_mask(color, threshold)
         self.canvases.display_mask()
 
-    def open_popup(self, color):
-        """Open a popup window with specific text, number-only field, and an OK button."""
-        self.status_left.config(text="Adding color...")
-        # Create the popup window
-        popup = tk.Toplevel(self)
-        popup.title("Specify color threshold")
-        
-        # Display instructions text
-        label = tk.Label(popup, text="Please enter an integer:")
-        label.pack(pady=10)
-
-        # Validation function to allow only numeric input
-        def validate_numeric_input(char):
-            return char.isdigit()
-
-        # Register the validation function
-        validate_command = popup.register(validate_numeric_input)
-        
-        # Entry field for numbers only
-        entry = tk.Entry(popup, validate="key", validatecommand=(validate_command, '%S'))
-        entry.pack(pady=5)
-
-        # OK button to confirm and close the popup
-        ok_button = tk.Button(popup, text="OK", command=lambda: self.close_popup(popup, entry.get(), color))
-        ok_button.pack(pady=10)
-
-    def close_popup(self, popup, value, color):
-        """Handle closing the popup and processing the entered value."""
-        if value.isdigit():
-            popup.destroy()  # Close the popup window
-            index = len(self.gt_colors)
-            threshold = int(value)
-            self.gt_colors.append((index, color, threshold)) # (idx, color, threshold)
-            self.canvases.add_mask(color, threshold)
-            self.canvases.display_mask()
-            self.status_left.config(text=f"Added color {str(color)} with threshold: {threshold}")
-        else:
-            tk.messagebox.showwarning("Invalid input", "Please enter a valid number.")
-
     def save_mask(self, event):
         if self.mask_dir_path is not None:
             self.status_left.config(text="Saving mask...")
@@ -189,6 +184,45 @@ class App(tk.Tk):
             self.status_left.config(text="Mask saved.")
         else:
             self.status_left.config(text="Saving failed! Set mask directory first!")
+    
+    def lab2rgb2hex(self, lab):
+        rgb = self.canvases.get_rgb_color(lab)
+        return "#%02x%02x%02x" % (rgb[0], rgb[1], rgb[2])
+
+    def color_button(self, idx, color, threshold):
+        self.controls[idx][0].config(bg=self.lab2rgb2hex(color))
+        self.update_entry(threshold, idx)
+        self.update_slider(idx)
+
+    def update_entry(self, value, row_index):
+        """Update the entry field with the current slider value."""
+        entry = self.controls[row_index][2]
+        entry.delete(0, tk.END)
+        entry.insert(0, f"{int(float(value))}")
+        self.canvases.update_seg_mask(row_index, int(float(value)))
+
+    def update_slider(self, row_index):
+        """Update the slider based on the entry's value."""
+        entry = self.controls[row_index][2]
+        slider = self.controls[row_index][1]
+        try:
+            # Get value from entry and set slider position
+            value = int(entry.get())
+            if 0 <= value <= 100:  # Assuming slider range is 0 to 100
+                slider.set(value)
+                self.canvases.update_seg_mask(row_index, value)
+            else:
+                self.status_left.config(text="Value out of range. Must be between 0 and 100.")
+        except ValueError:
+            self.status_left.config(text="Invalid entry. Please enter a number.")
+
+    def reset_colors(self):
+        self.status_left.config(text="Color selection is reset.")
+        self.gt_colors = []
+        self._init_toolbar()
+        self.update_mask()
+        gc.collect()
+
 
 if __name__ == "__main__":
     app = App()
