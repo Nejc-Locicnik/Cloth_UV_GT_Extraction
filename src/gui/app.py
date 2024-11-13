@@ -14,6 +14,8 @@ class App(tk.Tk):
         self.canvases = CanvasManager(self, self.settings)
         self.images = None
         self.current_img_index = None
+        self.image_dir_path = None
+        self.mask_dir_path = None
         self.gt_colors = []
 
         self._init_menubar()
@@ -179,11 +181,14 @@ class App(tk.Tk):
             tk.messagebox.showwarning("Invalid input", "Please enter a valid number.")
 
     def save_mask(self, event):
-        self.status_left.config(text="Saving mask...")
-        if self.canvases.segmentation_mask is not None:
-            filename = f"{grab_filename(self.images[0]).split("_")[0]}_mask.png"
-            self.canvases.save_mask(path_to_file(self.mask_dir_path, filename))
-        self.status_left.config(text="Mask saved.")
+        if self.mask_dir_path is not None:
+            self.status_left.config(text="Saving mask...")
+            if self.canvases.segmentation_mask is not None:
+                filename = f"{grab_filename(self.images[self.current_img_index]).split("_")[0]}_mask.png"
+                self.canvases.save_mask(path_to_file(self.mask_dir_path, filename))
+            self.status_left.config(text="Mask saved.")
+        else:
+            self.status_left.config(text="Saving failed! Set mask directory first!")
 
 if __name__ == "__main__":
     app = App()
